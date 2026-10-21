@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Riso Runner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Bungee&family=Space+Mono:wght@400;700&display=swap">
+<style>
+:root{
+  --ink:#120E28;
+  --ink-2:#1B1540;
+  --panel:#221A52;
+  --violet:#3B2F6B;
+  --pink:#FF4FA3;
+  --aqua:#2BD3D3;
+  --yellow:#FFC53D;
+  --paper:#F2E9DA;
+  --paper-dim:#9F937F;
+  --mono:"Space Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --body:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --display:"Bungee","Archivo Black",Impact,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:
+    radial-gradient(120% 90% at 50% -10%, #2A2059 0%, rgba(42,32,89,0) 60%),
+    var(--ink);
+  color:var(--paper);
+  font-family:var(--body);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  padding:clamp(16px,4vw,40px) clamp(12px,3vw,32px) 56px;
+}
+.wrap{width:100%;max-width:940px;display:flex;flex-direction:column;gap:clamp(16px,2.6vw,26px)}
+
+/* ---------- wordmark ---------- */
+.masthead{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.wordmark{
+  font-family:var(--display);
+  font-size:clamp(30px,7.4vw,62px);
+  letter-spacing:.01em;
+  line-height:.94;
+  color:var(--paper);
+  text-shadow:3px -3px 0 var(--pink), -3px 3px 0 var(--aqua);
+  margin:0;
+}
+.tagline{
+  font-family:var(--mono);
+  font-size:clamp(10px,1.6vw,12px);
+  letter-spacing:.34em;
+  text-transform:uppercase;
+  color:var(--paper-dim);
+  margin:0;
+}
+
+/* ---------- printed panel ---------- */
+.press{
+  position:relative;
+  background:var(--panel);
+  border:2px solid var(--paper);
+  padding:clamp(10px,1.8vw,16px);
+  display:flex;flex-direction:column;gap:12px;
+  box-shadow:8px 8px 0 rgba(255,79,163,.35), -8px -8px 0 rgba(43,211,211,.22);
+}
+.reg{position:absolute;width:13px;height:13px;pointer-events:none;opacity:.85}
+.reg::before,.reg::after{content:"";position:absolute;background:var(--aqua)}
+.reg::before{left:6px;top:0;width:1px;height:13px}
+.reg::after{top:6px;left:0;height:1px;width:13px}
+.reg.tl{left:-7px;top:-7px}.reg.tr{right:-7px;top:-7px}
+.reg.bl{left:-7px;bottom:-7px}.reg.br{right:-7px;bottom:-7px}
+
+/* ---------- HUD ---------- */
+.hud{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(76px,1fr));
+  gap:2px;
+  background:var(--paper);
+  border:2px solid var(--paper);
+}
+.cell{background:var(--ink);padding:7px 9px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cell .k{font-family:var(--mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--paper-dim)}
+.cell .v{font-family:var(--mono);font-weight:700;font-size:clamp(13px,2.2vw,17px);font-variant-numeric:tabular-nums;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell.coin .v{color:var(--yellow)}
+.cell.ammo .v{color:var(--aqua)}
+.cell.ammo.empty .v{color:var(--paper-dim)}
+.cell.life .v{color:var(--pink);letter-spacing:.08em}
+.cell.time .v{color:var(--aqua)}
+.cell.time.low .v{color:var(--pink)}
+
+/* ---------- stage ---------- */
+.stage{position:relative;background:#0C0920;border:2px solid var(--paper);line-height:0;overflow:hidden}
+canvas{display:block;width:100%;height:auto;aspect-ratio:480/272;image-rendering:pixelated;image-rendering:crisp-edges}
+.grain{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(242,233,218,.16) .6px, transparent .7px);
+  background-size:3px 3px;
+  mix-blend-mode:overlay;opacity:.5;
+}
+.scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.22) 0 1px,rgba(0,0,0,0) 1px 3px);opacity:.35}
+
+/* ---------- overlays ---------- */
+.veil{
+  position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:clamp(8px,1.6vw,14px);text-align:center;line-height:1.5;
+  background:rgba(18,14,40,.9);padding:6% 8%;
+}
+.veil.on{display:flex}
+.veil h2{font-family:var(--display);font-size:clamp(20px,4.6vw,38px);margin:0;color:var(--paper);text-shadow:2px -2px 0 var(--pink),-2px 2px 0 var(--aqua);text-wrap:balance}
+.veil p{margin:0;font-size:clamp(12px,2vw,15px);color:var(--paper);max-width:34em}
+.veil .sub{font-family:var(--mono);font-size:clamp(9px,1.5vw,11px);letter-spacing:.24em;text-transform:uppercase;color:var(--paper-dim)}
+.tally{display:flex;gap:clamp(12px,3vw,28px);font-family:var(--mono);font-size:clamp(11px,1.9vw,14px);font-variant-numeric:tabular-nums;flex-wrap:wrap;justify-content:center}
+.tally b{color:var(--yellow);font-weight:700}
+.btn{
+  font-family:var(--display);font-size:clamp(12px,2.2vw,16px);
+  background:var(--paper);color:var(--ink);border:0;padding:11px 22px;cursor:pointer;
+  box-shadow:4px 4px 0 var(--pink);transition:transform .09s ease,box-shadow .09s ease;
+}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--pink)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--pink)}
+.btn:focus-visible{outline:3px solid var(--aqua);outline-offset:3px}
+.keys{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;font-family:var(--mono);font-size:clamp(9px,1.5vw,11px);color:var(--paper-dim)}
+.key{border:1px solid var(--paper-dim);padding:3px 7px;color:var(--paper);letter-spacing:.06em}
+
+/* ---------- footer strip ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;justify-content:space-between}
+.legend ul{list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px;margin:0;padding:0;font-family:var(--mono);font-size:11px;color:var(--paper-dim);letter-spacing:.05em}
+.legend li b{color:var(--paper);font-weight:700}
+.toggles{display:flex;gap:8px}
+.tg{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;background:transparent;color:var(--paper-dim);border:1px solid #4A3F80;padding:5px 10px;cursor:pointer}
+.tg[aria-pressed="true"]{color:var(--ink);background:var(--aqua);border-color:var(--aqua)}
+.tg:focus-visible{outline:2px solid var(--aqua);outline-offset:2px}
+
+/* ---------- touch pad ---------- */
+.pad{display:none;gap:10px;justify-content:space-between;align-items:center;touch-action:none}
+.pad .side{display:flex;gap:10px}
+.pad button{
+  font-family:var(--display);font-size:17px;background:var(--panel);color:var(--paper);
+  border:2px solid var(--paper);width:66px;height:56px;cursor:pointer;user-select:none;-webkit-user-select:none;
+}
+.pad button.jump{width:104px;background:var(--pink);color:var(--ink);border-color:var(--pink)}
+.pad button.shot{width:86px;background:var(--aqua);color:var(--ink);border-color:var(--aqua)}
+.pad button:active{background:var(--aqua);color:var(--ink);border-color:var(--aqua)}
+@media (hover:none) and (pointer:coarse){ .pad{display:flex} }
+
+.notes{font-size:12.5px;line-height:1.7;color:var(--paper-dim);max-width:62ch;margin:0}
+.notes b{color:var(--paper);font-weight:600}
+
+@media (prefers-reduced-motion:reduce){
+  .btn{transition:none}
+  .scan{display:none}
+}
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <h1 class="wordmark">RISO RUNNER</h1>
+    <p class="tagline">3 stages &middot; 蛍光インクの夜を走れ</p>
+  </header>
+
+  <section class="press">
+    <i class="reg tl"></i><i class="reg tr"></i><i class="reg bl"></i><i class="reg br"></i>
+
+    <div class="hud">
+      <div class="cell"><span class="k">Stage</span><span class="v" id="hStage">1-3</span></div>
+      <div class="cell"><span class="k">Score</span><span class="v" id="hScore">0</span></div>
+      <div class="cell coin"><span class="k">Coin</span><span class="v" id="hCoin">0</span></div>
+      <div class="cell ammo empty" id="hAmmoCell"><span class="k">Ink</span><span class="v" id="hAmmo">&mdash;</span></div>
+      <div class="cell life"><span class="k">Life</span><span class="v" id="hLife">♥♥♥</span></div>
+      <div class="cell time" id="hTimeCell"><span class="k">Time</span><span class="v" id="hTime">300</span></div>
+      <div class="cell"><span class="k">Best</span><span class="v" id="hBest">0</span></div>
+    </div>
+
+    <div class="stage">
+      <canvas id="cv" width="480" height="272" aria-label="横スクロールアクションゲーム画面"></canvas>
+      <div class="grain"></div>
+      <div class="scan"></div>
+      <div class="veil on" id="veil">
+        <p class="sub" id="vSub">Press start</p>
+        <h2 id="vTitle">RISO RUNNER</h2>
+        <p id="vBody">←→ で走り、スペースでジャンプ。敵は踏んで倒す。トゲと落とし穴に触れたら1ミス。</p>
+        <div class="tally" id="vTally" hidden></div>
+        <button class="btn" id="vBtn">スタート</button>
+        <div class="keys" id="vKeys">
+          <span class="key">← →</span><span class="key">A D</span><span class="key">SPACE / Z</span><span class="key">X で撃つ</span><span class="key">P で一時停止</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <ul>
+        <li><b>◆</b> コイン +50</li>
+        <li><b>◈</b> ジェム +500</li>
+        <li><b>踏む / 撃つ</b> +100</li>
+        <li><b>コイン10枚</b> インク弾 +3</li>
+        <li><b>残り時間</b> ×10 ボーナス</li>
+      </ul>
+      <div class="toggles">
+        <button class="tg" id="tSound" aria-pressed="true">Sound</button>
+        <button class="tg" id="tMusic" aria-pressed="true">Music</button>
+      </div>
+    </div>
+
+    <div class="pad">
+      <div class="side">
+        <button data-k="left" aria-label="左へ移動">◀</button>
+        <button data-k="right" aria-label="右へ移動">▶</button>
+      </div>
+      <div class="side">
+        <button class="shot" data-k="shot" aria-label="インク弾を撃つ">SHOT</button>
+        <button class="jump" data-k="jump" aria-label="ジャンプ">JUMP</button>
+      </div>
+    </div>
+  </section>
+
+  <p class="notes"><b>操作のコツ。</b>ジャンプはボタンを押している長さで高さが変わります。足場を踏み外した直後でも数フレームだけジャンプを受け付けるので、崖ぎわは思い切って走り抜けてください。敵の真上から落ちると踏みつけ、そのままジャンプを押しっぱなしにすると高く跳ね上がります。<b>インク弾。</b>コインを10枚集めるごとにインクガンへ3発チャージされ（最大9発）、X キーか SHOT ボタンで前方に撃てます。踏めない飛行体もこれで落とせます。ミスすると残った弾はインクごとこぼれてしまいます。</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   定数
+   ============================================================ */
+const TS=16, VW=480, VH=272, ROWS=17;
+const ACC=.5, MAXV=2.8, FRIC_G=.78, FRIC_A=.94;
+const G_RISE=.44, G_FALL=.62, MAXFALL=9, JUMPV=-8.0;
+const COYOTE=7, BUFFER=8;
+const START_TIME=300, TICK=24;   // 24フレームごとに残り時間 -1
+const COIN_PER_AMMO=10, AMMO_GAIN=3, AMMO_MAX=9, SHOT_CD=13, BULLET_V=4.6, BULLET_LIFE=110;
+
+const cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+ctx.imageSmoothingEnabled=false;
+
+/* ============================================================
+   ステージ定義
+     ground : [x0,x1) を row15-16 の地面にする
+     blocks : {x,y,w,h} 硬いブロック
+     plats  : {x,y,w}   すり抜け床（上からのみ乗れる）
+     movers : {x,y,w,axis,dist,speed} 動く足場
+     spikes : {x,y,w}
+     coins  : [x,y,n]   横一列
+     gems   : [x,y]
+     walkers/flyers : [x,y]  (y は立つ足場の1つ上のタイル)
+   ============================================================ */
+const LEVELS=[
+{
+  name:"はじまりの印刷所", w:110, start:[3,14], goal:[104,14], time:300,
+  ground:[[0,13],[16,30],[34,49],[52,68],[71,86],[89,110]],
+  blocks:[{x:20,y:12,w:4,h:1},{x:38,y:11,w:3,h:1},
+          {x:56,y:14,w:2,h:1},{x:58,y:13,w:2,h:2},{x:60,y:12,w:3,h:3},
+          {x:63,y:13,w:2,h:2},{x:65,y:14,w:2,h:1},
+          {x:74,y:12,w:5,h:1},{x:96,y:14,w:5,h:1},{x:98,y:13,w:3,h:1}],
+  plats:[{x:26,y:11,w:4},{x:44,y:10,w:4},{x:80,y:10,w:4}],
+  movers:[],
+  spikes:[{x:81,y:14,w:2}],
+  coins:[[13,12,1],[14,11,1],[15,12,1],[20,11,4],[26,10,4],
+         [30,12,1],[31,11,2],[33,12,1],[38,10,3],[44,9,4],
+         [49,12,3],[56,13,1],[58,12,1],[60,11,3],[63,12,2],[65,13,2],
+         [68,12,1],[69,11,1],[70,12,1],[74,11,5],[80,9,4],[72,13,2],
+         [86,12,1],[87,11,1],[88,12,1],[92,13,4]],
+  gems:[[62,10]],
+  walkers:[[24,14],[42,14],[53,14],[79,14],[92,14],[102,14]],
+  flyers:[[46,7],[82,7]]
+},
+{
+  name:"ゆれる足場", w:122, start:[3,14], goal:[117,14], time:300,
+  ground:[[0,12],[16,24],[40,48],[62,70],[86,94],[104,122]],
+  blocks:[{x:44,y:11,w:3,h:1},{x:108,y:14,w:4,h:1},{x:110,y:13,w:2,h:1}],
+  plats:[{x:18,y:11,w:3},{x:64,y:11,w:4},{x:100,y:11,w:3}],
+  movers:[{x:25,y:14,w:4,axis:"x",dist:10,speed:.45},
+          {x:50,y:8,w:3,axis:"y",dist:5,speed:.42},
+          {x:55,y:11,w:4,axis:"x",dist:2,speed:.4},
+          {x:72,y:13,w:4,axis:"x",dist:10,speed:.55},
+          {x:96,y:9,w:3,axis:"y",dist:5,speed:.46}],
+  spikes:[{x:20,y:14,w:2},{x:66,y:14,w:2},{x:90,y:14,w:2}],
+  coins:[[12,12,1],[13,11,2],[15,12,1],[18,10,3],
+         [27,12,4],[32,11,3],[36,12,3],[44,10,3],
+         [50,7,3],[56,10,3],[59,11,1],[64,10,4],
+         [73,12,4],[78,11,3],[82,12,3],
+         [96,8,3],[100,10,3],[104,12,2],[108,13,2],[110,12,2]],
+  gems:[[33,9],[97,7]],
+  walkers:[[17,14],[45,14],[68,14],[88,14],[107,14],[114,14]],
+  flyers:[[42,9],[69,7],[91,8],[112,9]]
+},
+{
+  name:"とげの回廊", w:132, start:[3,14], goal:[127,14], time:320,
+  ground:[[0,14],[18,26],[30,38],[42,56],[60,72],[76,84],[88,100],[104,132]],
+  blocks:[{x:12,y:12,w:3,h:1},{x:28,y:11,w:3,h:1},{x:44,y:12,w:2,h:1},
+          {x:50,y:11,w:2,h:1},{x:56,y:12,w:3,h:1},{x:68,y:11,w:3,h:1},
+          {x:102,y:12,w:2,h:1},{x:114,y:12,w:3,h:1},
+          {x:122,y:14,w:5,h:1},{x:124,y:13,w:3,h:1}],
+  plats:[{x:20,y:10,w:4},{x:40,y:10,w:3},{x:74,y:11,w:4},{x:96,y:10,w:4}],
+  movers:[{x:36,y:13,w:3,axis:"x",dist:5,speed:.6},
+          {x:84,y:13,w:3,axis:"x",dist:3,speed:.5},
+          {x:106,y:9,w:3,axis:"y",dist:4,speed:.5}],
+  spikes:[{x:8,y:14,w:2},{x:22,y:14,w:2},{x:34,y:14,w:3},{x:48,y:14,w:2},
+          {x:52,y:14,w:2},{x:64,y:14,w:3},{x:80,y:14,w:2},{x:92,y:14,w:4},
+          {x:110,y:14,w:2},{x:118,y:14,w:3}],
+  coins:[[8,12,2],[12,11,3],[15,11,2],[16,12,1],[20,9,4],
+         [26,12,1],[27,11,1],[28,10,3],[36,12,3],[40,9,3],
+         [44,11,2],[50,10,2],[56,11,3],[60,12,2],[68,10,3],
+         [72,12,2],[74,10,4],[84,12,3],[92,13,4],[96,9,4],
+         [102,11,2],[106,8,3],[114,11,3],[121,13,1],[122,13,2],[124,12,3]],
+  gems:[[22,9],[76,10],[98,9]],
+  walkers:[[5,14],[19,14],[31,14],[45,14],[62,14],[70,14],[78,14],
+           [96,14],[106,14],[116,14],[129,14]],
+  flyers:[[16,9],[40,7],[58,7],[86,8],[116,9]]
+}];
+
+/* ============================================================
+   ステージ構築
+   ============================================================ */
+let lvl=null;
+
+function buildLevel(def){
+  const grid=[];
+  for(let y=0;y<ROWS;y++) grid.push(new Array(def.w).fill("."));
+  const put=(x,y,c)=>{ if(x>=0&&x<def.w&&y>=0&&y<ROWS) grid[y][x]=c; };
+
+  for(const [a,b] of def.ground) for(let x=a;x<b;x++){ put(x,15,"#"); put(x,16,"#"); }
+  for(const b of def.blocks) for(let y=b.y;y<b.y+b.h;y++) for(let x=b.x;x<b.x+b.w;x++) put(x,y,"#");
+  for(const p of def.plats) for(let x=p.x;x<p.x+p.w;x++) put(x,p.y,"-");
+  for(const s of def.spikes) for(let x=s.x;x<s.x+s.w;x++) put(x,s.y,"^");
+
+  const coins=[];
+  for(const [x,y,n] of def.coins)
+    for(let i=0;i<n;i++){
+      const tx=x+i;
+      if(grid[y] && grid[y][tx]===".") coins.push({x:tx*TS+8,y:y*TS+8,got:false,ph:(tx*7)%60,big:false});
+    }
+  for(const [x,y] of def.gems) coins.push({x:x*TS+8,y:y*TS+8,got:false,ph:(x*5)%60,big:true});
+
+  const enemies=[];
+  for(const [x,y] of def.walkers)
+    enemies.push({t:"w",x:x*TS+2,y:y*TS+4,w:12,h:12,vx:(x%2?.55:-.55),vy:0,dead:0,ph:x%60});
+  for(const [x,y] of def.flyers)
+    enemies.push({t:"f",x:x*TS+1,y:y*TS+2,w:14,h:12,vx:(x%2?.4:-.4),vy:0,dead:0,
+                  ph:x*9%360,base:y*TS+2,x0:x*TS+1,rng:44});
+
+  const movers=def.movers.map(m=>({
+    x:m.x*TS, y:m.y*TS, w:m.w*TS, h:6,
+    ox:m.x*TS, oy:m.y*TS,
+    axis:m.axis, dist:m.dist*TS, sp:m.speed, dir:1, dx:0, dy:0
+  }));
+
+  return {
+    def, grid, w:def.w, pxw:def.w*TS,
+    coins, enemies, movers,
+    goal:{x:def.goal[0]*TS, y:def.goal[1]*TS},
+    start:{x:def.start[0]*TS, y:def.start[1]*TS}
+  };
+}
+
+const isSolid=c=>c==="#";
+function tileAt(tx,ty){
+  if(tx<0||tx>=lvl.w) return "#";
+  if(ty<0||ty>=ROWS) return ".";
+  return lvl.grid[ty][tx];
+}
+
+/* ============================================================
+   衝突
+   ============================================================ */
+function moveX(e,dx){
+  e.x+=dx;
+  const t0=Math.floor(e.y/TS), t1=Math.floor((e.y+e.h-1)/TS);
+  let hit=false;
+  if(dx>0){
+    const tx=Math.floor((e.x+e.w-1)/TS);
+    for(let ty=t0;ty<=t1;ty++) if(isSolid(tileAt(tx,ty))){ e.x=tx*TS-e.w; e.vx=0; hit=true; break; }
+  }else if(dx<0){
+    const tx=Math.floor(e.x/TS);
+    for(let ty=t0;ty<=t1;ty++) if(isSolid(tileAt(tx,ty))){ e.x=(tx+1)*TS; e.vx=0; hit=true; break; }
+  }
+  return hit;
+}
+
+function moveY(e,dy){
+  const prevBottom=e.y+e.h;
+  e.y+=dy;
+  const t0=Math.floor(e.x/TS), t1=Math.floor((e.x+e.w-1)/TS);
+  let landed=false;
+  if(dy>0){
+    const ty=Math.floor((e.y+e.h-1)/TS);
+    for(let tx=t0;tx<=t1;tx++){
+      const c=tileAt(tx,ty);
+      if(isSolid(c) || (c==="-" && prevBottom<=ty*TS+2)){
+        e.y=ty*TS-e.h; e.vy=0; landed=true; break;
+      }
+    }
+  }else if(dy<0){
+    const ty=Math.floor(e.y/TS);
+    for(let tx=t0;tx<=t1;tx++) if(isSolid(tileAt(tx,ty))){ e.y=(ty+1)*TS; e.vy=0; break; }
+  }
+  return landed;
+}
+
+function overlap(a,b){
+  return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+}
+
+/* ============================================================
+   サウンド（WebAudio で合成、外部ファイルなし）
+   ============================================================ */
+let actx=null, master=null, sfxOn=true, musOn=true;
+function audioInit(){
+  if(actx) return;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC) return;
+  actx=new AC();
+  master=actx.createGain(); master.gain.value=.5; master.connect(actx.destination);
+}
+function tone(freq,freq2,dur,type,vol,delay){
+  if(!sfxOn||!actx) return;
+  const t=actx.currentTime+(delay||0);
+  const o=actx.createOscillator(), g=actx.createGain();
+  o.type=type||"square"; o.frequency.setValueAtTime(freq,t);
+  if(freq2) o.frequency.exponentialRampToValueAtTime(Math.max(20,freq2),t+dur);
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(vol||.18,t+.008);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+.02);
+}
+const SFX={
+  jump : ()=>tone(430,760,.10,"square",.14),
+  coin : ()=>{tone(1050,0,.05,"triangle",.16);tone(1570,0,.09,"triangle",.14,.05);},
+  gem  : ()=>{[880,1175,1480,1760].forEach((f,i)=>tone(f,0,.09,"triangle",.15,i*.055));},
+  stomp: ()=>{tone(320,90,.12,"square",.18);tone(140,60,.16,"sawtooth",.10);},
+  hurt : ()=>{tone(440,70,.42,"sawtooth",.20);},
+  clear: ()=>{[523,659,784,1046,1318].forEach((f,i)=>tone(f,0,.16,"square",.15,i*.10));},
+  over : ()=>{[392,330,262,196].forEach((f,i)=>tone(f,0,.28,"square",.16,i*.16));},
+  land : ()=>tone(180,120,.05,"square",.06),
+  shot : ()=>{tone(760,220,.09,"square",.13);tone(1500,600,.06,"triangle",.08);},
+  hit  : ()=>{tone(620,150,.12,"sawtooth",.15);tone(240,80,.14,"square",.10,.02);},
+  empty: ()=>tone(180,150,.05,"square",.07),
+  arm  : ()=>{[659,880,1175].forEach((f,i)=>tone(f,0,.11,"square",.14,i*.07));}
+};
+
+/* --- ちいさなチップチューン --- */
+const BASS=[0,0,7,0, 5,5,0,0, 3,3,10,3, 5,5,7,7].map(n=>110*Math.pow(2,n/12));
+const LEAD=[12,-1,16,19, -1,16,12,-1, 15,-1,19,22, -1,19,15,14].map(n=>n<0?0:220*Math.pow(2,n/12));
+let mStep=0, mAcc=0;
+function music(dt){
+  if(!musOn||!actx||state!=="play") return;
+  mAcc+=dt;
+  const stepDur=.1071;               // 140BPM の16分
+  while(mAcc>=stepDur){
+    mAcc-=stepDur;
+    const i=mStep%16;
+    const b=BASS[i];
+    if(b){ const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();
+      o.type="triangle"; o.frequency.setValueAtTime(b,t);
+      g.gain.setValueAtTime(.10,t); g.gain.exponentialRampToValueAtTime(.0001,t+.16);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t+.18); }
+    const l=LEAD[i];
+    if(l){ const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();
+      o.type="square"; o.frequency.setValueAtTime(l,t);
+      g.gain.setValueAtTime(.045,t); g.gain.exponentialRampToValueAtTime(.0001,t+.13);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t+.15); }
+    mStep++;
+  }
+}
+
+/* ============================================================
+   ゲーム状態
+   ============================================================ */
+let state="title";           // title | play | paused | dying | clear | gameover | win
+let stageIdx=0, score=0, coinCount=0, lives=3, timeLeft=START_TIME, tickAcc=0;
+let camX=0, shake=0, flash=0, frame=0, stateT=0, clearBonus=0;
+let best=0; try{ best=parseInt(localStorage.getItem("risoRunnerBest")||"0",10)||0; }catch(e){}
+
+const P={x:0,y:0,w:11,h:14,vx:0,vy:0,onG:false,face:1,coyote:0,buf:0,anim:0,onPlat:null};
+const keys={left:false,right:false,jump:false,shot:false};
+let jumpEdge=false, shotEdge=false, particles=[];
+let ammo=0, shotCd=0, armT=0, muzzle=0, bullets=[];
+
+function addParts(x,y,n,col,spd,life){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2, s=Math.random()*spd;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-.6,l:life,m:life,c:col,s:1+Math.random()*1.6});
+  }
+}
+
+/* ============================================================
+   進行
+   ============================================================ */
+function startLevel(i){
+  stageIdx=i;
+  lvl=buildLevel(LEVELS[i]);
+  P.x=lvl.start.x; P.y=lvl.start.y; P.vx=0; P.vy=0; P.onG=false; P.face=1; P.onPlat=null;
+  P.coyote=0; P.buf=0; P.anim=0;
+  timeLeft=LEVELS[i].time; tickAcc=0; jumpEdge=false; shotEdge=false;
+  camX=0; shake=0; flash=0; particles=[]; bullets=[]; shotCd=0; armT=0; muzzle=0;
+  state="play"; stateT=0;
+  hideVeil(); syncHUD();
+}
+function newGame(){
+  score=0; coinCount=0; lives=3; ammo=0;
+  startLevel(0);
+}
+function die(){
+  if(state!=="play") return;
+  state="dying"; stateT=0;
+  if(ammo>0){ addParts(P.x+P.w/2,P.y+P.h/2,10,"aqua",2.6,30); ammo=0; syncHUD(); }
+  bullets=[];
+  P.vy=-6.5; P.vx=0; shake=10; flash=8;
+  addParts(P.x+P.w/2,P.y+P.h/2,22,"pink",3.4,40);
+  SFX.hurt();
+}
+function afterDeath(){
+  lives--;
+  if(lives<=0){
+    state="gameover"; SFX.over(); saveBest();
+    showVeil("Game Over","印刷停止","インクが尽きた。もう一度、最初の版から刷り直そう。","もう一度",()=>newGame(),
+      [["スコア",score],["コイン",coinCount],["到達",("STAGE "+(stageIdx+1))]]);
+  }else{
+    startLevel(stageIdx);
+  }
+}
+function clearLevel(){
+  state="clear"; stateT=0;
+  clearBonus=timeLeft*10; score+=clearBonus;
+  SFX.clear(); saveBest(); syncHUD();
+  addParts(lvl.goal.x+8,lvl.goal.y,30,"mix",3,60);
+  const last=stageIdx>=LEVELS.length-1;
+  setTimeout(()=>{
+    if(state!=="clear") return;
+    if(last){
+      state="win";
+      showVeil("完 走","All stages cleared","3つの版をすべて刷り上げた。夜の印刷所に朝が来る。","最初から",()=>newGame(),
+        [["最終スコア",score],["コイン",coinCount],["残機",lives]]);
+    }else{
+      showVeil("STAGE "+(stageIdx+1)+" CLEAR","版下完成", LEVELS[stageIdx].name+" を突破。","次のステージへ",()=>startLevel(stageIdx+1),
+        [["タイムボーナス",clearBonus],["スコア",score],["コイン",coinCount]]);
+    }
+  },900);
+}
+function saveBest(){
+  if(score>best){ best=score; try{ localStorage.setItem("risoRunnerBest",String(best)); }catch(e){} }
+}
+
+/* ============================================================
+   更新
+   ============================================================ */
+function updateMovers(){
+  for(const m of lvl.movers){
+    const px=m.x, py=m.y;
+    if(m.axis==="x"){
+      m.x+=m.sp*m.dir;
+      if(m.x>m.ox+m.dist){ m.x=m.ox+m.dist; m.dir=-1; }
+      if(m.x<m.ox){ m.x=m.ox; m.dir=1; }
+    }else{
+      m.y+=m.sp*m.dir;
+      if(m.y>m.oy+m.dist){ m.y=m.oy+m.dist; m.dir=-1; }
+      if(m.y<m.oy){ m.y=m.oy; m.dir=1; }
+    }
+    m.dx=m.x-px; m.dy=m.y-py;
+  }
+}
+
+function platformCollide(prevBottom){
+  P.onPlat=null;
+  for(const m of lvl.movers){
+    if(!overlap(P,m)) continue;
+    if(P.vy>=0 && prevBottom<=m.y+6){
+      P.y=m.y-P.h; P.vy=0; P.onG=true; P.onPlat=m; P.coyote=COYOTE;
+    }else{
+      // 横／下からの押し出し
+      const oL=(P.x+P.w)-m.x, oR=(m.x+m.w)-P.x, oT=(P.y+P.h)-m.y, oB=(m.y+m.h)-P.y;
+      const mn=Math.min(oL,oR,oT,oB);
+      if(mn===oL){ P.x=m.x-P.w; P.vx=0; }
+      else if(mn===oR){ P.x=m.x+m.w; P.vx=0; }
+      else if(mn===oT){ P.y=m.y-P.h; P.vy=0; P.onG=true; P.onPlat=m; P.coyote=COYOTE; }
+      else { P.y=m.y+m.h; if(P.vy<0) P.vy=0; }
+    }
+  }
+}
+
+function grantWeapon(){
+  ammo=Math.min(AMMO_MAX, ammo+AMMO_GAIN);
+  armT=110;
+  addParts(P.x+P.w/2,P.y+P.h/2,14,"aqua",2.4,30);
+  SFX.arm();
+}
+
+function shoot(){
+  if(shotCd>0) return;
+  if(ammo<=0){ shotCd=10; SFX.empty(); return; }
+  ammo--; shotCd=SHOT_CD; muzzle=5;
+  const dir=P.face;
+  bullets.push({
+    x: dir>0 ? P.x+P.w-2 : P.x-4,
+    y: P.y+5, w:6, h:4, vx:dir*BULLET_V, dir, life:BULLET_LIFE, ph:0
+  });
+  P.vx-=dir*.35;                    // わずかな反動
+  addParts(P.x+P.w/2+dir*8,P.y+7,4,"aqua",1.4,14);
+  SFX.shot(); syncHUD();
+}
+
+function updateBullets(){
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];
+    b.x+=b.vx; b.life--; b.ph++;
+    if(b.life<=0 || b.x<camX-60 || b.x>camX+VW+80 || b.x<-20 || b.x>lvl.pxw+20){
+      bullets.splice(i,1); continue;
+    }
+    // 壁
+    const tx=Math.floor((b.vx>0? b.x+b.w : b.x)/TS);
+    const ty0=Math.floor(b.y/TS), ty1=Math.floor((b.y+b.h-1)/TS);
+    let wall=false;
+    for(let ty=ty0;ty<=ty1;ty++) if(isSolid(tileAt(tx,ty))){ wall=true; break; }
+    if(wall){
+      addParts(b.x+b.w/2,b.y+b.h/2,5,"aqua",1.5,16);
+      bullets.splice(i,1); continue;
+    }
+    // 敵
+    for(const e of lvl.enemies){
+      if(e.dead) continue;
+      if(!overlap(b,e)) continue;
+      e.dead=18; score+=100; shake=4;
+      addParts(e.x+e.w/2,e.y+e.h/2,12,"mix",2.4,26);
+      SFX.hit(); syncHUD();
+      bullets.splice(i,1);
+      break;
+    }
+  }
+}
+
+function updatePlayer(){
+  // 入力
+  if(keys.left){ P.vx-=ACC; P.face=-1; }
+  if(keys.right){ P.vx+=ACC; P.face=1; }
+  if(!keys.left && !keys.right) P.vx*=(P.onG?FRIC_G:FRIC_A);
+  P.vx=Math.max(-MAXV,Math.min(MAXV,P.vx));
+  if(Math.abs(P.vx)<.04) P.vx=0;
+
+  if(shotCd>0) shotCd--;
+  if(muzzle>0) muzzle--;
+  if(shotEdge){ shotEdge=false; shoot(); }
+
+  if(jumpEdge){ P.buf=BUFFER; jumpEdge=false; }
+  if(P.buf>0) P.buf--;
+  if(P.coyote>0) P.coyote--;
+
+  if(P.buf>0 && P.coyote>0){
+    P.vy=JUMPV; P.buf=0; P.coyote=0; P.onG=false; P.onPlat=null;
+    SFX.jump(); addParts(P.x+P.w/2,P.y+P.h,6,"paper",1.2,16);
+  }
+  if(!keys.jump && P.vy<-2) P.vy=-2;   // 可変ジャンプ
+
+  P.vy+=(P.vy<0?G_RISE:G_FALL);
+  if(P.vy>MAXFALL) P.vy=MAXFALL;
+
+  // 動く足場に乗っていれば一緒に運ばれる
+  if(P.onPlat){ P.x+=P.onPlat.dx; P.y+=P.onPlat.dy; }
+
+  const wasG=P.onG, prevBottom=P.y+P.h;
+  moveX(P,P.vx);
+  P.onG=false;
+  if(moveY(P,P.vy)){ P.onG=true; P.coyote=COYOTE; }
+  platformCollide(prevBottom);
+  if(P.onG && !wasG && Math.abs(P.vy)<1){ SFX.land(); addParts(P.x+P.w/2,P.y+P.h,4,"paper",1,12); }
+
+  P.anim+=Math.abs(P.vx)*.28;
+
+  // 落下死
+  if(P.y>VH+40){ die(); return; }
+
+  // トゲ
+  const tx0=Math.floor((P.x+2)/TS), tx1=Math.floor((P.x+P.w-3)/TS);
+  const ty0=Math.floor((P.y+3)/TS), ty1=Math.floor((P.y+P.h-1)/TS);
+  for(let ty=ty0;ty<=ty1;ty++) for(let tx=tx0;tx<=tx1;tx++)
+    if(tileAt(tx,ty)==="^"){ die(); return; }
+
+  // コイン
+  for(const c of lvl.coins){
+    if(c.got) continue;
+    const r=c.big?9:7;
+    if(Math.abs((P.x+P.w/2)-c.x)<r+5 && Math.abs((P.y+P.h/2)-c.y)<r+7){
+      c.got=true;
+      if(c.big){ score+=500; addParts(c.x,c.y,14,"aqua",2.4,34); SFX.gem(); }
+      else{
+        score+=50; coinCount++; addParts(c.x,c.y,6,"yellow",1.6,22); SFX.coin();
+        if(coinCount%COIN_PER_AMMO===0) grantWeapon();
+      }
+      syncHUD();
+    }
+  }
+
+  // ゴール
+  if(P.x+P.w>lvl.goal.x+2 && P.x<lvl.goal.x+14 && P.y+P.h>lvl.goal.y-48 && P.y<lvl.goal.y+16){
+    clearLevel();
+  }
+}
+
+function updateEnemies(){
+  for(const e of lvl.enemies){
+    if(e.dead){ e.dead--; continue; }
+    if(e.x<camX-140 || e.x>camX+VW+180){ e.ph++; continue; }
+
+    if(e.t==="w"){
+      e.vy+=G_FALL; if(e.vy>MAXFALL) e.vy=MAXFALL;
+      if(moveX(e,e.vx)) e.vx=-e.vx;
+      moveY(e,e.vy);
+      // 崖・トゲの手前で反転
+      const ahead=Math.floor((e.vx>0? e.x+e.w+1 : e.x-1)/TS);
+      const below=Math.floor((e.y+e.h+2)/TS);
+      const g=tileAt(ahead,below), f=tileAt(ahead,below-1);
+      if((!isSolid(g)&&g!=="-") || f==="^") e.vx=-e.vx;
+      e.ph++;
+    }else{
+      e.x+=e.vx;
+      const t=Math.floor((e.vx>0? e.x+e.w : e.x)/TS);
+      const ty=Math.floor((e.y+e.h/2)/TS);
+      if(isSolid(tileAt(t,ty)) || e.x<e.x0-e.rng || e.x>e.x0+e.rng ||
+         e.x<8 || e.x>lvl.pxw-24) e.vx=-e.vx;
+      e.ph+=1;
+      e.y=e.base+Math.sin(e.ph*.045)*16;
+    }
+
+    // プレイヤーとの接触
+    if(state==="play" && overlap(P,e)){
+      const stomp = P.vy>0 && (P.y+P.h) < (e.y+e.h*0.65);
+      if(stomp){
+        e.dead=18; score+=100; syncHUD();
+        P.vy = keys.jump? -7.6 : -6.2;
+        shake=5;
+        addParts(e.x+e.w/2,e.y+e.h/2,12,"pink",2.2,26);
+        SFX.stomp();
+      }else{
+        die(); return;
+      }
+    }
+  }
+}
+
+function updateParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=.16; p.vx*=.98; p.l--;
+    if(p.l<=0) particles.splice(i,1);
+  }
+}
+
+function updateCamera(){
+  const target=P.x+P.w/2-VW*0.42;
+  camX+=(target-camX)*0.12;
+  camX=Math.max(0,Math.min(lvl.pxw-VW,camX));
+}
+
+function step(dt){
+  frame++; stateT++;
+  if(shake>0) shake*=.86;
+  if(flash>0) flash--;
+
+  if(state==="play"){
+    if(armT>0) armT--;
+    updateMovers();
+    updatePlayer();
+    if(state!=="play"){ updateParticles(); return; }
+    updateBullets();
+    if(state!=="play"){ updateParticles(); return; }
+    updateEnemies();
+    if(state!=="play"){ updateParticles(); return; }
+    updateParticles();
+    updateCamera();
+    tickAcc++;
+    if(tickAcc>=TICK){
+      tickAcc=0; timeLeft--;
+      if(timeLeft<=30 && timeLeft>0 && timeLeft%5===0) tone(880,0,.06,"square",.09);
+      if(timeLeft<=0){ timeLeft=0; die(); }
+      syncHUD();
+    }
+  }else if(state==="dying"){
+    P.vy+=G_FALL*.8; P.y+=P.vy;
+    updateParticles();
+    if(stateT>68) afterDeath();
+  }else if(state==="clear"){
+    if(P.x<lvl.goal.x+40){ P.x+=1.6; P.anim+=.5; }
+    P.vy+=G_FALL; moveY(P,P.vy);
+    updateParticles(); updateCamera();
+  }else{
+    updateParticles();
+  }
+}
+
+/* ============================================================
+   描画
+   ============================================================ */
+const C_INK="#120E28", C_VIOLET="#3B2F6B", C_PINK="#FF4FA3",
+      C_AQUA="#2BD3D3", C_YELLOW="#FFC53D", C_PAPER="#F2E9DA";
+
+const STARS=[];
+for(let i=0;i<70;i++){
+  const a=(i*2654435761)%100000;
+  STARS.push({x:(a%1600), y:(Math.floor(a/1600)%150), s:(i%7===0?2:1), b:.25+((i%5)/8)});
+}
+
+function hills(par,baseY,col,amp,freq){
+  const off=camX*par;
+  ctx.fillStyle=col;
+  ctx.beginPath();
+  ctx.moveTo(0,VH);
+  for(let x=0;x<=VW;x+=5){
+    const wx=x+off;
+    const y=baseY+Math.sin(wx*freq)*amp+Math.sin(wx*freq*2.7+1.3)*(amp*.45);
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(VW,VH); ctx.closePath(); ctx.fill();
+}
+
+function drawBackground(){
+  const g=ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,"#241B57"); g.addColorStop(.55,"#191244"); g.addColorStop(1,"#100C26");
+  ctx.fillStyle=g; ctx.fillRect(0,0,VW,VH);
+
+  // 星
+  for(const s of STARS){
+    const x=((s.x-camX*.12)%1600+1600)%1600;
+    if(x>VW) continue;
+    ctx.globalAlpha=s.b*(.6+.4*Math.sin((frame+s.x)*.04));
+    ctx.fillStyle=C_PAPER; ctx.fillRect(Math.round(x),s.y,s.s,s.s);
+  }
+  ctx.globalAlpha=1;
+
+  // 月（版ズレ表現）
+  const mx=VW-72, my=44;
+  ctx.fillStyle="rgba(255,79,163,.55)"; ctx.beginPath(); ctx.arc(mx+3,my-3,21,0,6.284); ctx.fill();
+  ctx.fillStyle="rgba(43,211,211,.45)"; ctx.beginPath(); ctx.arc(mx-3,my+3,21,0,6.284); ctx.fill();
+  ctx.fillStyle=C_PAPER; ctx.beginPath(); ctx.arc(mx,my,20,0,6.284); ctx.fill();
+  ctx.fillStyle="rgba(18,14,40,.10)";
+  ctx.beginPath(); ctx.arc(mx-6,my-5,3.5,0,6.284); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx+5,my+3,5,0,6.284); ctx.fill();
+
+  hills(.22,196,"#2A2159",16,.010);
+  hills(.42,214,"#342A6B",13,.017);
+  ctx.fillStyle="rgba(43,211,211,.07)"; ctx.fillRect(0,232,VW,VH-232);
+}
+
+function drawTiles(){
+  const c0=Math.max(0,Math.floor(camX/TS)-1), c1=Math.min(lvl.w-1,Math.ceil((camX+VW)/TS)+1);
+  for(let tx=c0;tx<=c1;tx++){
+    for(let ty=0;ty<ROWS;ty++){
+      const c=lvl.grid[ty][tx];
+      if(c===".") continue;
+      const x=Math.round(tx*TS-camX), y=ty*TS;
+      if(c==="#"){
+        ctx.fillStyle=C_VIOLET; ctx.fillRect(x,y,TS,TS);
+        ctx.fillStyle="rgba(18,14,40,.30)";
+        ctx.fillRect(x+((tx*5+ty*3)%10),y+3+((tx*7)%9),2,2);
+        ctx.fillRect(x+2+((tx*3+ty*7)%11),y+8+((ty*5)%6),2,2);
+        if(!isSolid(tileAt(tx,ty-1))){
+          ctx.fillStyle=C_AQUA; ctx.fillRect(x,y,TS,3);
+          ctx.fillStyle="rgba(255,79,163,.5)"; ctx.fillRect(x,y+3,TS,1);
+        }
+        ctx.fillStyle="rgba(18,14,40,.22)"; ctx.fillRect(x,y+TS-1,TS,1); ctx.fillRect(x+TS-1,y,1,TS);
+      }else if(c==="-"){
+        ctx.fillStyle=C_PINK; ctx.fillRect(x,y,TS,4);
+        ctx.fillStyle="rgba(242,233,218,.55)"; ctx.fillRect(x,y,TS,1);
+        ctx.fillStyle="rgba(255,79,163,.30)"; ctx.fillRect(x+3,y+4,2,3); ctx.fillRect(x+11,y+4,2,3);
+      }else if(c==="^"){
+        ctx.fillStyle=C_PINK;
+        for(let k=0;k<2;k++){
+          const sx=x+k*8;
+          ctx.beginPath(); ctx.moveTo(sx,y+TS); ctx.lineTo(sx+4,y+2); ctx.lineTo(sx+8,y+TS); ctx.closePath(); ctx.fill();
+        }
+        ctx.fillStyle="rgba(242,233,218,.6)";
+        ctx.fillRect(x+3,y+6,1,4); ctx.fillRect(x+11,y+6,1,4);
+      }
+    }
+  }
+}
+
+function drawMovers(){
+  for(const m of lvl.movers){
+    const x=Math.round(m.x-camX), y=Math.round(m.y);
+    ctx.fillStyle=C_PAPER; ctx.fillRect(x,y,m.w,3);
+    ctx.fillStyle=C_AQUA;  ctx.fillRect(x,y+3,m.w,3);
+    ctx.fillStyle="rgba(255,79,163,.65)";
+    for(let i=2;i<m.w;i+=7) ctx.fillRect(x+i,y+6,3,2);
+    ctx.fillStyle="rgba(43,211,211,.22)";
+    ctx.fillRect(x+m.w/2-1,y+8,2,6);
+  }
+}
+
+function drawCoins(){
+  for(const c of lvl.coins){
+    if(c.got) continue;
+    if(c.x<camX-20||c.x>camX+VW+20) continue;
+    const x=Math.round(c.x-camX), y=Math.round(c.y+Math.sin((frame+c.ph)*.07)*1.6);
+    if(c.big){
+      const s=6+Math.sin((frame+c.ph)*.08)*.8;
+      ctx.fillStyle="rgba(43,211,211,.30)";
+      ctx.beginPath(); ctx.moveTo(x,y-s-3); ctx.lineTo(x+s+3,y); ctx.lineTo(x,y+s+3); ctx.lineTo(x-s-3,y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=C_AQUA;
+      ctx.beginPath(); ctx.moveTo(x,y-s); ctx.lineTo(x+s,y); ctx.lineTo(x,y+s); ctx.lineTo(x-s,y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=C_PAPER;
+      ctx.beginPath(); ctx.moveTo(x,y-s); ctx.lineTo(x+s*.45,y-s*.2); ctx.lineTo(x,y+s*.15); ctx.lineTo(x-s*.45,y-s*.2); ctx.closePath(); ctx.fill();
+    }else{
+      const wsc=Math.abs(Math.cos((frame+c.ph)*.06));
+      const rw=Math.max(1.4,5.5*wsc);
+      ctx.fillStyle=C_YELLOW;
+      ctx.beginPath(); ctx.ellipse(x,y,rw,5.5,0,0,6.284); ctx.fill();
+      ctx.fillStyle="rgba(18,14,40,.35)";
+      ctx.beginPath(); ctx.ellipse(x,y,Math.max(.6,rw*.42),2.6,0,0,6.284); ctx.fill();
+    }
+  }
+}
+
+function drawBullets(){
+  for(const b of bullets){
+    const x=Math.round(b.x-camX), y=Math.round(b.y);
+    // 尾（版ズレのにじみ）
+    ctx.fillStyle="rgba(43,211,211,.22)";
+    ctx.fillRect(x-(b.dir>0?7:-b.w), y+1, 7, 2);
+    ctx.fillStyle="rgba(255,79,163,.55)";
+    ctx.fillRect(x-b.dir*2, y-1, b.w, b.h);
+    ctx.fillStyle=C_AQUA;
+    ctx.fillRect(x, y, b.w, b.h);
+    ctx.fillStyle=C_PAPER;
+    ctx.fillRect(b.dir>0? x+b.w-2 : x, y+1, 2, 2);
+  }
+}
+
+function drawGoal(){
+  const gx=Math.round(lvl.goal.x-camX), gy=lvl.goal.y;
+  ctx.fillStyle="rgba(43,211,211,.18)"; ctx.fillRect(gx+2,gy-56,12,72);
+  ctx.fillStyle=C_PAPER; ctx.fillRect(gx+7,gy-54,2,70);
+  ctx.fillStyle=C_AQUA;  ctx.fillRect(gx+4,gy+14,8,3);
+  const wv=Math.sin(frame*.09)*3;
+  ctx.fillStyle=C_PINK;
+  ctx.beginPath();
+  ctx.moveTo(gx+9,gy-54);
+  ctx.lineTo(gx+30+wv,gy-46);
+  ctx.lineTo(gx+9,gy-38);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle=C_PAPER; ctx.fillRect(gx+12,gy-48,3,3);
+}
+
+function drawEnemies(){
+  for(const e of lvl.enemies){
+    if(e.x<camX-40||e.x>camX+VW+40) continue;
+    const x=Math.round(e.x-camX), y=Math.round(e.y);
+    if(e.dead){
+      const k=e.dead/18;
+      ctx.globalAlpha=k;
+      ctx.fillStyle=C_PINK; ctx.fillRect(x,y+e.h-4*k,e.w,4*k);
+      ctx.globalAlpha=1; continue;
+    }
+    if(e.t==="w"){
+      const wob=Math.sin(e.ph*.18)*1.2;
+      ctx.fillStyle="rgba(18,14,40,.35)"; ctx.fillRect(x+1,y+e.h-1,e.w-2,2);
+      ctx.fillStyle=C_PINK; ctx.fillRect(x,y+1,e.w,e.h-2);
+      ctx.fillRect(x+1,y,e.w-2,e.h);
+      ctx.fillStyle=C_INK;
+      ctx.fillRect(x+2,y+e.h-2+wob*0,3,2);
+      ctx.fillRect(x+e.w-5,y+e.h-2,3,2);
+      ctx.fillStyle=C_PAPER;
+      const ex=e.vx>0?1:-1;
+      ctx.fillRect(x+3+ex,y+4,3,3); ctx.fillRect(x+e.w-6+ex,y+4,3,3);
+      ctx.fillStyle=C_INK;
+      ctx.fillRect(x+4+ex,y+5,1,2); ctx.fillRect(x+e.w-5+ex,y+5,1,2);
+      ctx.fillStyle="rgba(242,233,218,.35)"; ctx.fillRect(x+2,y+1,e.w-4,1);
+    }else{
+      const fl=Math.sin(e.ph*.35)*4;
+      ctx.fillStyle=C_AQUA;
+      ctx.beginPath(); ctx.moveTo(x+2,y+5); ctx.lineTo(x-4,y+1+fl); ctx.lineTo(x-1,y+9); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x+e.w-2,y+5); ctx.lineTo(x+e.w+4,y+1+fl); ctx.lineTo(x+e.w+1,y+9); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=C_PINK; ctx.fillRect(x+2,y+2,e.w-4,e.h-4);
+      ctx.fillStyle=C_PAPER; ctx.fillRect(x+4,y+5,3,3); ctx.fillRect(x+e.w-7,y+5,3,3);
+      ctx.fillStyle=C_INK; ctx.fillRect(x+5,y+6,1,2); ctx.fillRect(x+e.w-6,y+6,1,2);
+    }
+  }
+}
+
+function drawPlayer(){
+  const x=Math.round(P.x-camX), y=Math.round(P.y), f=P.face;
+  const running=P.onG && Math.abs(P.vx)>.3;
+  const ph=Math.sin(P.anim);
+  const dying=(state==="dying");
+
+  // マフラー（進行方向の逆に流れる）
+  ctx.fillStyle=C_PINK;
+  const tail=Math.min(7,3+Math.abs(P.vx)*1.6);
+  ctx.fillRect(x+(f>0?-1:P.w-2)-(f>0?tail:0), y+4+Math.sin(frame*.25)*1, tail+3, 3);
+  ctx.fillRect(x+1,y+3,P.w-2,3);
+
+  // 影
+  if(P.onG){ ctx.fillStyle="rgba(18,14,40,.30)"; ctx.fillRect(x,y+P.h,P.w,2); }
+
+  // 脚
+  ctx.fillStyle=C_PAPER;
+  if(P.onG){
+    const a=running?ph*2.4:0, b=running?-ph*2.4:0;
+    ctx.fillRect(x+2+a,y+P.h-4,3,4);
+    ctx.fillRect(x+P.w-5+b,y+P.h-4,3,4);
+  }else{
+    ctx.fillRect(x+2,y+P.h-4,3,P.vy<0?3:4);
+    ctx.fillRect(x+P.w-5,y+P.h-5,3,4);
+  }
+
+  // 胴体
+  ctx.fillStyle=dying?C_PINK:C_PAPER;
+  ctx.fillRect(x,y+2,P.w,P.h-6);
+  ctx.fillStyle="rgba(18,14,40,.16)";
+  ctx.fillRect(f>0?x:x+P.w-2,y+3,2,P.h-8);
+
+  // バイザー
+  ctx.fillStyle=C_AQUA;
+  if(dying) ctx.fillStyle=C_INK;
+  ctx.fillRect(f>0? x+4 : x+2, y+4, 6, 3);
+  ctx.fillStyle="rgba(242,233,218,.75)";
+  ctx.fillRect(f>0? x+8 : x+2, y+4, 2, 1);
+
+  // ベルト
+  ctx.fillStyle=C_PINK; ctx.fillRect(x+1,y+P.h-6,P.w-2,2);
+
+  // インクガン
+  if(ammo>0 && !dying){
+    const gx = f>0 ? x+P.w-2 : x-4;
+    ctx.fillStyle=C_INK;   ctx.fillRect(gx,y+8,6,4);
+    ctx.fillStyle=C_AQUA;  ctx.fillRect(gx,y+8,6,3);
+    ctx.fillStyle=C_PINK;  ctx.fillRect(f>0?gx+5:gx, y+8, 1, 3);
+    if(muzzle>0){
+      const m=muzzle/5;
+      ctx.globalAlpha=m;
+      ctx.fillStyle=C_PAPER;
+      ctx.fillRect(f>0? gx+6 : gx-4, y+7, 4, 5);
+      ctx.globalAlpha=1;
+    }
+  }
+}
+
+function drawParticles(){
+  for(const p of particles){
+    const a=p.l/p.m;
+    ctx.globalAlpha=Math.max(0,Math.min(1,a));
+    ctx.fillStyle = p.c==="yellow"?C_YELLOW : p.c==="aqua"?C_AQUA : p.c==="paper"?C_PAPER :
+                    p.c==="mix"?(p.l%3===0?C_YELLOW:p.l%3===1?C_AQUA:C_PINK) : C_PINK;
+    ctx.fillRect(Math.round(p.x-camX),Math.round(p.y),p.s,p.s);
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawStageLabel(){
+  if(state!=="play"||stateT>150) return;
+  const a=stateT<110?1:(150-stateT)/40;
+  ctx.globalAlpha=a;
+  ctx.fillStyle="rgba(18,14,40,.72)"; ctx.fillRect(0,110,VW,44);
+  ctx.fillStyle=C_AQUA; ctx.fillRect(0,110,VW,2); ctx.fillRect(0,152,VW,2);
+  ctx.textAlign="center";
+  ctx.font='700 11px "Space Mono", monospace';
+  ctx.fillStyle=C_PINK; ctx.fillText("STAGE "+(stageIdx+1)+" / "+LEVELS.length, VW/2, 126);
+  ctx.font='600 16px Archivo, sans-serif';
+  ctx.fillStyle=C_PAPER; ctx.fillText(LEVELS[stageIdx].name, VW/2, 145);
+  ctx.textAlign="left"; ctx.globalAlpha=1;
+}
+
+function drawArmToast(){
+  if(armT<=0) return;
+  const a=armT>80? (110-armT)/30 : Math.min(1,armT/30);
+  const x=Math.round(P.x+P.w/2-camX), y=Math.round(P.y)-18-Math.min(10,(110-armT)*.3);
+  ctx.globalAlpha=Math.max(0,Math.min(1,a));
+  ctx.textAlign="center";
+  ctx.font='700 10px "Space Mono", monospace';
+  ctx.fillStyle="rgba(255,79,163,.75)"; ctx.fillText("INK +"+AMMO_GAIN, x+1, y+1);
+  ctx.fillStyle=C_AQUA;                 ctx.fillText("INK +"+AMMO_GAIN, x, y);
+  ctx.textAlign="left"; ctx.globalAlpha=1;
+}
+
+function render(){
+  ctx.setTransform(1,0,0,1,0,0);
+  drawBackground();
+  const sx=(Math.random()-.5)*shake, sy=(Math.random()-.5)*shake;
+  ctx.save(); ctx.translate(Math.round(sx),Math.round(sy));
+  drawTiles();
+  drawGoal();
+  drawMovers();
+  drawCoins();
+  drawEnemies();
+  drawBullets();
+  drawParticles();
+  if(state!=="title") drawPlayer();
+  drawArmToast();
+  ctx.restore();
+
+  // 周辺減光
+  const vg=ctx.createRadialGradient(VW/2,VH/2,VH*.35,VW/2,VH/2,VH*.86);
+  vg.addColorStop(0,"rgba(18,14,40,0)"); vg.addColorStop(1,"rgba(18,14,40,.55)");
+  ctx.fillStyle=vg; ctx.fillRect(0,0,VW,VH);
+
+  if(flash>0){ ctx.fillStyle="rgba(255,79,163,"+(flash/8*.35)+")"; ctx.fillRect(0,0,VW,VH); }
+  drawStageLabel();
+}
+
+/* ============================================================
+   HUD とオーバーレイ
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const hStage=$("hStage"),hScore=$("hScore"),hCoin=$("hCoin"),hLife=$("hLife"),
+      hAmmo=$("hAmmo"),hAmmoCell=$("hAmmoCell"),
+      hTime=$("hTime"),hTimeCell=$("hTimeCell"),hBest=$("hBest");
+const veil=$("veil"),vTitle=$("vTitle"),vSub=$("vSub"),vBody=$("vBody"),
+      vBtn=$("vBtn"),vTally=$("vTally"),vKeys=$("vKeys");
+let veilAction=null;
+
+function syncHUD(){
+  hStage.textContent=(stageIdx+1)+" / "+LEVELS.length;
+  hScore.textContent=score.toLocaleString("en-US");
+  hCoin.textContent=coinCount;
+  hAmmo.textContent = ammo>0 ? ("×"+ammo) : "—";
+  hAmmoCell.classList.toggle("empty", ammo<=0);
+  hLife.textContent=lives>0?"♥".repeat(lives):"—";
+  hTime.textContent=timeLeft;
+  hTimeCell.classList.toggle("low",timeLeft<=60);
+  hBest.textContent=Math.max(best,score).toLocaleString("en-US");
+}
+
+function showVeil(title,sub,body,btn,action,tally,keys){
+  vTitle.textContent=title;
+  vSub.textContent=sub;
+  vBody.textContent=body;
+  vBtn.textContent=btn;
+  veilAction=action;
+  if(tally && tally.length){
+    vTally.hidden=false;
+    vTally.innerHTML=tally.map(([k,v])=>
+      "<span>"+k+" <b>"+(typeof v==="number"?v.toLocaleString("en-US"):v)+"</b></span>").join("");
+  }else vTally.hidden=true;
+  vKeys.hidden=!keys;
+  veil.classList.add("on");
+  vBtn.focus({preventScroll:true});
+}
+function hideVeil(){ veil.classList.remove("on"); veilAction=null; }
+
+vBtn.addEventListener("click",()=>{
+  audioInit();
+  if(actx && actx.state==="suspended") actx.resume();
+  const a=veilAction;
+  if(a){ hideVeil(); a(); }
+});
+
+function pause(){
+  if(state!=="play") return;
+  state="paused";
+  showVeil("一時停止","Paused","P キーかボタンで再開します。","再開",()=>{ state="play"; },null,true);
+}
+
+/* ============================================================
+   入力
+   ============================================================ */
+const KEYMAP={
+  ArrowLeft:"left", KeyA:"left",
+  ArrowRight:"right", KeyD:"right",
+  Space:"jump", KeyZ:"jump", ArrowUp:"jump", KeyW:"jump", KeyJ:"jump",
+  KeyX:"shot", KeyK:"shot", ShiftLeft:"shot", ShiftRight:"shot"
+};
+addEventListener("keydown",e=>{
+  if(e.code==="KeyP"||e.code==="Escape"){
+    if(state==="play") pause();
+    else if(state==="paused"){ hideVeil(); state="play"; }
+    e.preventDefault(); return;
+  }
+  const k=KEYMAP[e.code];
+  if(!k) return;
+  e.preventDefault();
+  if(k==="jump"){
+    audioInit();
+    if(actx && actx.state==="suspended") actx.resume();
+    if(!keys.jump) jumpEdge=true;
+    if(state!=="play" && veilAction){ const a=veilAction; hideVeil(); a(); return; }
+  }
+  if(k==="shot" && !keys.shot) shotEdge=true;
+  keys[k]=true;
+},{passive:false});
+addEventListener("keyup",e=>{
+  const k=KEYMAP[e.code];
+  if(k) keys[k]=false;
+});
+addEventListener("blur",()=>{ keys.left=keys.right=keys.jump=keys.shot=false; if(state==="play") pause(); });
+
+document.querySelectorAll(".pad button").forEach(b=>{
+  const k=b.dataset.k;
+  const on=e=>{ e.preventDefault(); audioInit();
+    if(actx&&actx.state==="suspended") actx.resume();
+    if(k==="jump"&&!keys.jump) jumpEdge=true;
+    if(k==="shot"&&!keys.shot) shotEdge=true;
+    keys[k]=true; };
+  const off=e=>{ e.preventDefault(); keys[k]=false; };
+  b.addEventListener("pointerdown",on);
+  b.addEventListener("pointerup",off);
+  b.addEventListener("pointercancel",off);
+  b.addEventListener("pointerleave",off);
+  b.addEventListener("contextmenu",e=>e.preventDefault());
+});
+
+const tSound=$("tSound"), tMusic=$("tMusic");
+tSound.addEventListener("click",()=>{ sfxOn=!sfxOn; tSound.setAttribute("aria-pressed",String(sfxOn)); });
+tMusic.addEventListener("click",()=>{ musOn=!musOn; tMusic.setAttribute("aria-pressed",String(musOn)); });
+
+/* ============================================================
+   メインループ
+   ============================================================ */
+let last=performance.now(), acc=0;
+const DT=1000/60;
+function loop(now){
+  requestAnimationFrame(loop);
+  let delta=now-last; last=now;
+  if(delta>250) delta=250;
+  acc+=delta;
+  let n=0;
+  while(acc>=DT && n<5){ step(DT/1000); acc-=DT; n++; }
+  music(delta/1000);
+  render();
+}
+
+/* ============================================================
+   起動
+   ============================================================ */
+lvl=buildLevel(LEVELS[0]);
+camX=0;
+syncHUD();
+showVeil("RISO RUNNER","Press start",
+  "←→ で走り、スペースでジャンプ。敵は上から踏んで倒す。コインを10枚集めるごとにインク弾が3発たまり、X キーで撃てる。トゲ・落とし穴・時間切れは1ミス。ステージは全3面。",
+  "スタート", ()=>newGame(), null, true);
+requestAnimationFrame(loop);
+
+})();
+</script>
